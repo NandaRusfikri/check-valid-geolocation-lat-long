@@ -20,6 +20,11 @@ Features:
 
 Since the project already use Go Module, I recommend to put the source code in any folder but GOPATH.
 
+If Error API KEY please change the API KEY in the file `config.json`
+
+you can get API key from [gps-coordinates.net](https://www.gps-coordinates.net/)
+
+
 
 
 #### Commad Line

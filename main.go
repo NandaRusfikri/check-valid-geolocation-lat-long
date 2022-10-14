@@ -41,6 +41,11 @@ type Component struct {
 	Village        string   `json:"village"`
 }
 
+type Status struct {
+	Code    int    `json:"code"`
+	Message string `json:"message"`
+}
+
 type ResponseAPI struct {
 	ID string `json:"id"`
 	ATMID string `json:"atm_id"`
@@ -52,10 +57,7 @@ type ResponseAPI struct {
 		Url  string `json:"url"`
 	} `json:"licenses"`
 	Results []Results `json:"results"`
-	Status struct {
-		Code    int    `json:"code"`
-		Message string `json:"message"`
-	} `json:"status"`
+	Status Status `json:"status"`
 	StayInformed struct {
 		Blog    string `json:"blog"`
 		Twitter string `json:"twitter"`
@@ -167,9 +169,11 @@ func CallAPI(data *CallAPIDto) (err error) {
 	return nil
 }
 
-
-func GetAPI (lat string,long string) (ResponseAPI){
-	url := fmt.Sprintf("https://api.opencagedata.com/geocode/v1/json?q=%v+%v&key=03c48dae07364cabb7f121d8c1519492&no_annotations=1&language=en",lat,long)
+type Config struct {
+	APIKEY string
+}
+func GetAPI (apikey string,lat string,long string) (ResponseAPI){
+	url := fmt.Sprintf("https://api.opencagedata.com/geocode/v1/json?q=%v+%v&key=%v&no_annotations=1&language=en",lat,long,apikey)
 
 	headers := make(map[string]interface{})
 
@@ -192,14 +196,28 @@ func GetAPI (lat string,long string) (ResponseAPI){
 
 
 
-
-
 	return rawResponse
 
 }
 func main()  {
 
+	jsonFile, err := os.Open("config.json")
+	// if we os.Open returns an error then handle it
+	if err != nil {
+		fmt.Println(err)
+	}
+	fmt.Println("Successfully Opened config.json")
+	// defer the closing of our jsonFile so that we can parse it later on
+	defer jsonFile.Close()
+
+	var config Config
+	byteValue, err := ioutil.ReadAll(jsonFile)
+	if err != nil {
+		log.Fatalln("err Read config json ",err)
+	}
+	json.Unmarshal(byteValue, &config)
 	fmt.Println("==== Wait Generate Data ====")
+
 
 	f, err := os.Open("datasource.csv")
 	if err != nil {
@@ -229,7 +247,12 @@ func main()  {
 
 	for _, item := range ListExtrackData {
 
-		Hasil:= GetAPI(item.Latitude,item.Longitude)
+		Hasil:= GetAPI(config.APIKEY,item.Latitude,item.Longitude)
+
+		if Hasil.Status.Code != 200 {
+			fmt.Println("Error CallAPI Please Check API KEY \n\n",Hasil.Status.Message)
+			break
+		}
 		Hasil.ATMID = item.Code
 		Hasil.ID = item.Id
 		Hasil.Latitude = item.Latitude
