@@ -1,14 +1,28 @@
-## Check Valid Geolocation With Latitudes and Longitudes
-#### By NandaRusfikri - 14/10/2022
+# Check Valid Geolocation With Latitudes and Longitudes
 
 ![](img/img1.jpg)
 ![](img/img2.jpg)
 
-- ### Note
-  - Input Datasource with CSV
-  - Output Geolocation Valid or Not Contains CSV
-  - Checking use API https://www.gps-coordinates.net/
-  
+## Description
+This is a simple project to check the  validity of geolocation with latitude and longitude.
+
+Features:
+* Check Valid Geolocation With Latitudes and Longitudes
+* Input datasource using csv file contains latitude & longitude.
+* Output format csv file contains country, postcode, state and road with valid geolocation.
+* Use API From [gps-coordinates.net](https://www.gps-coordinates.net/)
+* Suitable for cleaning geolocation data.
+
+
+### How To Run This Tools
+> Make sure you have prepared the datasource.csv file according to the existing format
+
+
+Since the project already use Go Module, I recommend to put the source code in any folder but GOPATH.
+
+
+
+#### Commad Line
 
   ```sh
   $ go get . || go mod 
@@ -39,6 +53,10 @@
   $ set GOOS=darwin
   $ go build -o geolocation-mac main.go 
   ```
+
+
+
+
 
 
 
