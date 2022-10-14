@@ -69,12 +69,12 @@ type ResponseAPI struct {
 }
 type SchemaDatasource struct {
 	Id string
-	ATMId string
+	Code string
 	Latitude string
 	Longitude string
 }
 
-func ExtrackData(data [][]string) []SchemaDatasource {
+func ExtrackCSVData(data [][]string) []SchemaDatasource {
 	var shoppingList []SchemaDatasource
 	for i, line := range data {
 		if i > 0 { // omit header line
@@ -83,7 +83,7 @@ func ExtrackData(data [][]string) []SchemaDatasource {
 				if j == 0 {
 					rec.Id = field
 				} else if j == 1 {
-					rec.ATMId = field
+					rec.Code = field
 				}else if j ==2 {
 					rec.Latitude = field
 				} else if j ==3 {
@@ -191,20 +191,20 @@ func GetAPI (lat string,long string) (ResponseAPI){
 	err = json.Unmarshal([]byte(request.BodyResponse), &rawResponse)
 
 
-	for _, result := range rawResponse.Results {
-		fmt.Printf("Country: %+v State:%v PosCode: %v subdistrict:%v Village:%v\n", result.Components.Country,
-			result.Components.State,result.Components.Postcode,result.Components.Subdistrict,result.Components.Village)
 
-	}
 
 
 	return rawResponse
 
 }
 func main()  {
+
+	fmt.Println("==== Wait Generate Data ====")
+
 	f, err := os.Open("datasource.csv")
 	if err != nil {
-		log.Fatal(err)
+		fmt.Println("error on open file datasource.csv: ", err)
+		log.Fatalln(err)
 	}
 
 	// remember to close the file at the end of the program
@@ -214,19 +214,23 @@ func main()  {
 	csvReader := csv.NewReader(f)
 	data, err := csvReader.ReadAll()
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalln("error on read csv file please check file: ", err)
 	}
 
 	// convert records to array of structs
-	ListExtrackData := ExtrackData(data)
+	ListExtrackData := ExtrackCSVData(data)
 
 	var ListData []ResponseAPI
 
 	fmt.Println("Total Row Datasource : ",len(ListExtrackData))
-	fmt.Println("Wait Generate Data")
+
+	fmt.Printf("\n\n\n")
+
+
 	for _, item := range ListExtrackData {
+
 		Hasil:= GetAPI(item.Latitude,item.Longitude)
-		Hasil.ATMID = item.ATMId
+		Hasil.ATMID = item.Code
 		Hasil.ID = item.Id
 		Hasil.Latitude = item.Latitude
 		Hasil.Longitude = item.Longitude
@@ -237,32 +241,28 @@ func main()  {
 	timeNow := time.Now()
 	path := fmt.Sprintf("output")
 	if err := os.MkdirAll(path, os.ModePerm); err != nil {
-		fmt.Println("err ",err)
+		log.Fatalln("err create folder ",err)
 	}
 	fileName := fmt.Sprintf("output-%d%02d%02d-%v.csv", timeNow.Year(), timeNow.Month(), timeNow.Day(),timeNow.Unix())
 
 	fullpath := filepath.Join(path, fileName)
 	err = os.Remove(fullpath)
 	if err != nil {
-		fmt.Println("err ",err)
+		log.Println("err ",err)
 		//return
 	}
 
 	csvFile, err := os.Create(fullpath)
 	if err != nil {
-		log.Println(err)
+		log.Fatalln("err create file ",err)
 	}
 
-	if err != nil {
-
-		log.Fatalln("failed to open file", err)
-	}
 
 	w := csv.NewWriter(csvFile)
 
 	var header []string
-	header = append(header, "NO")
-	header = append(header, "ATM ID")
+	header = append(header, "No")
+	header = append(header, "Code")
 	header = append(header, "Latitude")
 	header = append(header, "Longitude")
 	header = append(header, "Country")
@@ -278,22 +278,66 @@ func main()  {
 		log.Fatalln("error writing record to file", err)
 	}
 
-	for _, item := range ListData {
+	for i, item := range ListData {
 
 		var row []string
 		row = append(row, item.ID)
 		row = append(row, item.ATMID)
-		row = append(row, item.Latitude)
-		row = append(row, item.Longitude)
-		for _, result := range item.Results {
-			row = append(row, result.Components.Country)
-			row = append(row, result.Components.Postcode)
-			row = append(row, result.Components.State)
-			row = append(row, result.Components.Subdistrict)
-			row = append(row, result.Components.Village)
-			row = append(row, result.Components.Road)
-			row = append(row, result.Formatted)
+		row = append(row, fmt.Sprintf(`"%v"`,item.Latitude))
+		row = append(row, fmt.Sprintf(`"%v"`,item.Longitude))
+		if len(item.Results) > 0 {
+			for _, result := range item.Results {
+				if result.Components.Country != "" {
+					row = append(row, result.Components.Country)
+				}else {
+					row = append(row, "")
+				}
+				if result.Components.Postcode != "" {
+					row = append(row, result.Components.Postcode)
+				}else {
+					row = append(row, "")
+				}
+				if result.Components.State != "" {
+					row = append(row, result.Components.State)
+				}else {
+					row = append(row, "")
+				}
+				if result.Components.Subdistrict != "" {
+					row = append(row, result.Components.Subdistrict)
+				}else {
+					row = append(row, "")
+				}
+				if result.Components.Village != "" {
+					row = append(row, result.Components.Village)
+				}else {
+					row = append(row, "")
+				}
+				if result.Components.Road != "" {
+					row = append(row, result.Components.Road)
+				}else {
+					row = append(row, "")
+				}
+				if result.Formatted != "" {
+					row = append(row, result.Formatted)
+				}else {
+					row = append(row, "")
+				}
+
+				fmt.Printf("NO: %v Code: %v Country: %+v State:%v PosCode: %v subdistrict:%v Village:%v\n",i+1,
+					item.ATMID,result.Components.Country, result.Components.State,result.Components.Postcode,
+					result.Components.Subdistrict,result.Components.Village)
+
+			}
+		}else {
+			row = append(row, "")
+			row = append(row, "")
+			row = append(row, "")
+			row = append(row, "")
+			row = append(row, "")
+			row = append(row, "")
+			row = append(row, "")
 		}
+
 		row = append(row, fmt.Sprintf("https://www.google.co.id/maps/@%v,%v,19z",item.Latitude,item.Longitude))  // ref id
 
 
@@ -310,7 +354,7 @@ func main()  {
 	csvFile.Close()
 
 
-	fmt.Println("Done Generate Data")
+	fmt.Println("==== Done Generate Data ====")
 
 }
 

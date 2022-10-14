@@ -19,10 +19,25 @@
   ```sh
   $ go run main.go  
   ```
-  - Build application
+  - Build application Windows
 
   ```sh
-  $ go build -o geolocation.exe main.go 
+  $ set GOOS=windows
+  $ go build -o geolocation-win.exe main.go 
+  ```
+
+  - Build application Linux
+
+  ```sh
+  $ set GOOS=linux
+  $ go build -o geolocation-linux main.go 
+  ```
+
+  - Build application Mac
+
+  ```sh
+  $ set GOOS=darwin
+  $ go build -o geolocation-mac main.go 
   ```
 
 
