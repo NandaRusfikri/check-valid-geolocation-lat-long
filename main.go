@@ -16,8 +16,8 @@ import (
 
 type Results struct {
 	Components Component `json:"components"`
-	Confidence int    `json:"confidence"`
-	Formatted  string `json:"formatted"`
+	Confidence int       `json:"confidence"`
+	Formatted  string    `json:"formatted"`
 	Geometry   struct {
 		Lat float64 `json:"lat"`
 		Lng float64 `json:"lng"`
@@ -47,17 +47,17 @@ type Status struct {
 }
 
 type ResponseAPI struct {
-	ID string `json:"id"`
-	ATMID string `json:"atm_id"`
-	Latitude string `json:"latitude"`
-	Longitude string `json:"longitude"`
+	ID            string `json:"id"`
+	ATMID         string `json:"atm_id"`
+	Latitude      string `json:"latitude"`
+	Longitude     string `json:"longitude"`
 	Documentation string `json:"documentation"`
 	Licenses      []struct {
 		Name string `json:"name"`
 		Url  string `json:"url"`
 	} `json:"licenses"`
-	Results []Results `json:"results"`
-	Status Status `json:"status"`
+	Results      []Results `json:"results"`
+	Status       Status    `json:"status"`
 	StayInformed struct {
 		Blog    string `json:"blog"`
 		Twitter string `json:"twitter"`
@@ -70,9 +70,9 @@ type ResponseAPI struct {
 	TotalResults int `json:"total_results"`
 }
 type SchemaDatasource struct {
-	Id string
-	Code string
-	Latitude string
+	Id        string
+	Code      string
+	Latitude  string
 	Longitude string
 }
 
@@ -86,9 +86,9 @@ func ExtrackCSVData(data [][]string) []SchemaDatasource {
 					rec.Id = field
 				} else if j == 1 {
 					rec.Code = field
-				}else if j ==2 {
+				} else if j == 2 {
 					rec.Latitude = field
-				} else if j ==3 {
+				} else if j == 3 {
 					rec.Longitude = field
 
 				}
@@ -98,6 +98,7 @@ func ExtrackCSVData(data [][]string) []SchemaDatasource {
 	}
 	return shoppingList
 }
+
 type CallAPIDto struct {
 	Method       string
 	Url          string
@@ -165,16 +166,17 @@ func CallAPI(data *CallAPIDto) (err error) {
 	data.BodyResponse = string(bodyResponse)
 	data.HttpCode = response.StatusCode
 
-
 	return nil
 }
 
 type Config struct {
 	APIKEY string
 }
-func GetAPI (apikey string,lat string,long string) (ResponseAPI){
-	url := fmt.Sprintf("https://api.opencagedata.com/geocode/v1/json?q=%v+%v&key=%v&no_annotations=1&language=en",lat,long,apikey)
 
+func GetAPI(apikey string, lat string, long string) ResponseAPI {
+	url := fmt.Sprintf("https://api.opencagedata.com/geocode/v1/json?q=%v+%v&key=%v&no_annotations=1&language=en", lat, long, apikey)
+
+	//fmt.Println(url)
 	headers := make(map[string]interface{})
 
 	request := CallAPIDto{
@@ -186,7 +188,7 @@ func GetAPI (apikey string,lat string,long string) (ResponseAPI){
 
 	err := CallAPI(&request)
 	if err != nil {
-		fmt.Println("err CallAPI",err)
+		fmt.Println("err CallAPI Geo", err)
 	}
 	//fmt.Println("request.BodyResponse",request.BodyResponse)
 
@@ -194,12 +196,10 @@ func GetAPI (apikey string,lat string,long string) (ResponseAPI){
 	rawResponse := ResponseAPI{}
 	err = json.Unmarshal([]byte(request.BodyResponse), &rawResponse)
 
-
-
 	return rawResponse
 
 }
-func main()  {
+func main() {
 
 	jsonFile, err := os.Open("config.json")
 	// if we os.Open returns an error then handle it
@@ -213,11 +213,10 @@ func main()  {
 	var config Config
 	byteValue, err := ioutil.ReadAll(jsonFile)
 	if err != nil {
-		log.Fatalln("err Read config json ",err)
+		log.Fatalln("err Read config json ", err)
 	}
 	json.Unmarshal(byteValue, &config)
 	fmt.Println("==== Wait Generate Data ====")
-
 
 	f, err := os.Open("datasource.csv")
 	if err != nil {
@@ -240,46 +239,43 @@ func main()  {
 
 	var ListData []ResponseAPI
 
-	fmt.Println("Total Row Datasource : ",len(ListExtrackData))
+	fmt.Println("Total Row Datasource : ", len(ListExtrackData))
 
 	fmt.Printf("\n\n\n")
 
+	for i, item := range ListExtrackData {
 
-	for _, item := range ListExtrackData {
+		Hasil := GetAPI(config.APIKEY, item.Latitude, item.Longitude)
 
-		Hasil:= GetAPI(config.APIKEY,item.Latitude,item.Longitude)
-
-		if Hasil.Status.Code != 200 {
-			fmt.Println("Error CallAPI Please Check API KEY \n\n",Hasil.Status.Message)
-			break
+		if len(Hasil.Results) > 0 {
+			Hasil.ATMID = item.Code
+			Hasil.ID = item.Id
+			Hasil.Latitude = item.Latitude
+			Hasil.Longitude = item.Longitude
 		}
-		Hasil.ATMID = item.Code
-		Hasil.ID = item.Id
-		Hasil.Latitude = item.Latitude
-		Hasil.Longitude = item.Longitude
-		ListData = append(ListData,Hasil)
+		ListData = append(ListData, Hasil)
+		fmt.Println("Check Row : ", i+1)
 
 	}
 
 	timeNow := time.Now()
 	path := fmt.Sprintf("output")
 	if err := os.MkdirAll(path, os.ModePerm); err != nil {
-		log.Fatalln("err create folder ",err)
+		log.Fatalln("err create folder ", err)
 	}
-	fileName := fmt.Sprintf("output-%d%02d%02d-%v.csv", timeNow.Year(), timeNow.Month(), timeNow.Day(),timeNow.Unix())
+	fileName := fmt.Sprintf("output-%d%02d%02d-%v.csv", timeNow.Year(), timeNow.Month(), timeNow.Day(), timeNow.Unix())
 
 	fullpath := filepath.Join(path, fileName)
 	err = os.Remove(fullpath)
 	if err != nil {
-		log.Println("err ",err)
+		log.Println("err ", err)
 		//return
 	}
 
 	csvFile, err := os.Create(fullpath)
 	if err != nil {
-		log.Fatalln("err create file ",err)
+		log.Fatalln("err create file ", err)
 	}
-
 
 	w := csv.NewWriter(csvFile)
 
@@ -306,52 +302,52 @@ func main()  {
 		var row []string
 		row = append(row, item.ID)
 		row = append(row, item.ATMID)
-		row = append(row, fmt.Sprintf(`"%v"`,item.Latitude))
-		row = append(row, fmt.Sprintf(`"%v"`,item.Longitude))
+		row = append(row, fmt.Sprintf(`"%v"`, item.Latitude))
+		row = append(row, fmt.Sprintf(`"%v"`, item.Longitude))
 		if len(item.Results) > 0 {
 			for _, result := range item.Results {
 				if result.Components.Country != "" {
 					row = append(row, result.Components.Country)
-				}else {
+				} else {
 					row = append(row, "")
 				}
 				if result.Components.Postcode != "" {
 					row = append(row, result.Components.Postcode)
-				}else {
+				} else {
 					row = append(row, "")
 				}
 				if result.Components.State != "" {
 					row = append(row, result.Components.State)
-				}else {
+				} else {
 					row = append(row, "")
 				}
 				if result.Components.Subdistrict != "" {
 					row = append(row, result.Components.Subdistrict)
-				}else {
+				} else {
 					row = append(row, "")
 				}
 				if result.Components.Village != "" {
 					row = append(row, result.Components.Village)
-				}else {
+				} else {
 					row = append(row, "")
 				}
 				if result.Components.Road != "" {
 					row = append(row, result.Components.Road)
-				}else {
+				} else {
 					row = append(row, "")
 				}
 				if result.Formatted != "" {
 					row = append(row, result.Formatted)
-				}else {
+				} else {
 					row = append(row, "")
 				}
 
-				fmt.Printf("NO: %v Code: %v Country: %+v State:%v PosCode: %v subdistrict:%v Village:%v\n",i+1,
-					item.ATMID,result.Components.Country, result.Components.State,result.Components.Postcode,
-					result.Components.Subdistrict,result.Components.Village)
+				fmt.Printf("NO: %v Code: %v Country: %+v State:%v PosCode: %v subdistrict:%v Village:%v\n", i+1,
+					item.ATMID, result.Components.Country, result.Components.State, result.Components.Postcode,
+					result.Components.Subdistrict, result.Components.Village)
 
 			}
-		}else {
+		} else {
 			row = append(row, "")
 			row = append(row, "")
 			row = append(row, "")
@@ -361,8 +357,7 @@ func main()  {
 			row = append(row, "")
 		}
 
-		row = append(row, fmt.Sprintf("https://www.google.co.id/maps/@%v,%v,19z",item.Latitude,item.Longitude))  // ref id
-
+		row = append(row, fmt.Sprintf("https://www.google.co.id/maps/@%v,%v,19z", item.Latitude, item.Longitude)) // ref id
 
 		if err := w.Write(row); err != nil {
 			log.Fatalln("error writing record to file", err)
@@ -376,8 +371,6 @@ func main()  {
 	w.Flush()
 	csvFile.Close()
 
-
 	fmt.Println("==== Done Generate Data ====")
 
 }
-
